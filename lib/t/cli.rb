@@ -22,13 +22,14 @@ require 't/set'
 require 't/version'
 require 'thor'
 require 'time'
+require 'tweetstream'
 require 'twitter'
-require 'yaml'
-
 # twitter-text requires $KCODE to be set to UTF8 on Ruby versions < 1.8
 major, minor, patch = RUBY_VERSION.split('.')
 $KCODE='u' if major.to_i == 1 && minor.to_i < 9
 require 'twitter-text'
+require 'yajl'
+require 'yaml'
 
 module T
   class CLI < Thor
@@ -646,6 +647,26 @@ module T
         array << ["URL", "https://twitter.com/#{status.user.screen_name}/status/#{status.id}"]
         print_table(array)
       end
+    end
+
+    desc "stream", "Streams your Twitter timeline."
+    def stream
+      @rcfile.path = options['profile'] if options['profile']
+      TweetStream.configure do |config|
+        config.consumer_key = @rcfile.active_consumer_key
+        config.consumer_secret = @rcfile.active_consumer_secret
+        config.oauth_token = @rcfile.active_token
+        config.oauth_token_secret = @rcfile.active_secret
+        config.auth_method = :oauth
+        config.parser = :yajl
+      end
+      client = TweetStream::Client.new
+      client.on_timeline_status {|status| print_status(status)}
+      Signal.trap("TERM") do
+        client.stop
+        shutdown
+      end
+      client.userstream
     end
 
     desc "suggest [USER]", "Returns a listing of Twitter users' accounts you might enjoy following."

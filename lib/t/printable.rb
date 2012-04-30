@@ -62,6 +62,17 @@ module T
         end
       end
 
+      def print_status(status)
+        if STDOUT.tty? && !options['no-color']
+          say("  #{Thor::Shell::Color::BOLD}#{status.user.screen_name}", :yellow)
+          Thor::Shell::Basic.new.print_wrapped(status.text, :indent => 2)
+          say("  #{Thor::Shell::Color::BOLD}#{time_ago_in_words(status.created_at)} ago", :black)
+          say
+        else
+          say "#{status.user.screen_name.rjust(MAX_SCREEN_NAME_SIZE)}: #{status.text.gsub(/\n+/, ' ')} (#{time_ago_in_words(status.created_at)} ago)"
+        end
+      end
+
       def print_statuses(statuses)
         statuses.reverse! if options['reverse']
         if options['csv']
@@ -80,18 +91,7 @@ module T
           end
           print_table(array)
         else
-          if STDOUT.tty? && !options['no-color']
-            statuses.each do |status|
-              say("  #{Thor::Shell::Color::BOLD}#{status.user.screen_name}", :yellow)
-              Thor::Shell::Basic.new.print_wrapped(status.text, :indent => 2)
-              say("  #{Thor::Shell::Color::BOLD}#{time_ago_in_words(status.created_at)} ago", :black)
-              say
-            end
-          else
-            statuses.each do |status|
-              say "#{status.user.screen_name.rjust(MAX_SCREEN_NAME_SIZE)}: #{status.text.gsub(/\n+/, ' ')} (#{time_ago_in_words(status.created_at)} ago)"
-            end
-          end
+          statuses.each{|status| print_status(status)}
         end
       end
 
